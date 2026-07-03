@@ -493,6 +493,36 @@ async function handleOneAlert(token, docSnap) {
   }
   const deptData = deptsSnap.docs[0].data()
   const groupId = deptData.lineGroupId || deptData.lineUserId
+
+  // ── ปุ่มทดสอบ: ส่ง LINE + Telegram พร้อมกัน (ไม่ใช่ fallback) รายงานผลแยกช่อง ──
+  if (type === 'test') {
+    const flex = buildTestFlex(department, requestedByName || 'ทดสอบระบบ')
+    const altText = `🔔 ทดสอบระบบแจ้งเตือน — ${department}`
+    const tgChatId = deptData.telegramChatId
+    const [lineOk, tgRes] = await Promise.all([
+      groupId ? pushFlex(token, groupId, altText, flex) : Promise.resolve(null),
+      tgChatId
+        ? sendTelegramTo(tgChatId,
+            `🔔 <b>ทดสอบระบบแจ้งเตือน (Telegram)</b>\n🏥 แผนก: <b>${department}</b>\n` +
+            `ถ้าเห็นข้อความนี้ = ช่องทาง Telegram พร้อมใช้งาน ✅`)
+        : Promise.resolve(null),
+    ])
+    const lineLabel = lineOk === null ? 'ไม่ได้ตั้ง LINE' : lineOk ? 'สำเร็จ ✅' : 'ล้มเหลว ❌'
+    const tgLabel = tgRes === null ? 'ไม่ได้ตั้ง Chat ID' : tgRes ? 'สำเร็จ ✅' : 'ล้มเหลว ❌'
+    const testResult = `LINE: ${lineLabel} · Telegram: ${tgLabel}`
+    const anyOk = lineOk === true || tgRes === true
+    await docSnap.ref.update({
+      status: anyOk ? 'sent' : 'failed',
+      testResult,
+      lineOk,
+      telegramOk: tgRes,
+      ...(anyOk
+        ? { sentAt: FieldValue.serverTimestamp() }
+        : { error: 'test_all_failed', processedAt: FieldValue.serverTimestamp() }),
+    })
+    return
+  }
+
   if (!groupId) {
     await docSnap.ref.update({ status: 'failed', error: 'no_line_target', processedAt: FieldValue.serverTimestamp() })
     return
@@ -502,10 +532,7 @@ async function handleOneAlert(token, docSnap) {
   let flex
   let altText
 
-  if (type === 'test') {
-    flex = buildTestFlex(department, requestedByName || 'ทดสอบระบบ')
-    altText = `🔔 ทดสอบระบบแจ้งเตือน — ${department}`
-  } else if (type === 'box_verify_unknown') {
+  if (type === 'box_verify_unknown') {
     const msg = deptData.msgVerify || cfg.msgVerify || DEFAULT_MSG_VERIFY
     flex = buildVerifyFlex(department, requestedByName, msg)
     altText = `ขอตรวจสอบกล่องของ ${department}`
