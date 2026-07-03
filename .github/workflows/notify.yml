@@ -1,0 +1,28 @@
+name: notify
+
+# แทน Cloud Functions (โปรเจกต์อยู่บนแพลนฟรี Spark — รัน Functions ไม่ได้)
+# poll Firestore ทุก 5 นาที แล้วส่ง LINE / Telegram ที่ค้างอยู่ + งานแจ้งเตือนรายวัน
+on:
+  schedule:
+    - cron: '*/5 * * * *'   # ทุก 5 นาที (UTC) — GitHub อาจดีเลย์ได้บ้างช่วง load สูง
+  workflow_dispatch: {}       # กดรันเองได้จากแท็บ Actions (ใช้ทดสอบ)
+
+# กันไม่ให้รอบก่อนหน้าที่ยังไม่จบชนกับรอบใหม่
+concurrency:
+  group: yrbox-notify
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install --no-audit --no-fund
+      - run: node index.js
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
+          APP_BASE_URL: https://yrbox1.web.app

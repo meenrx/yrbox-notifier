@@ -1,0 +1,15 @@
+{
+  "name": "yrbox-notifier",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GitHub Actions notifier for yrbox (รพ.ยะรัง) — replaces Cloud Functions on the free Firebase Spark plan. Sends LINE / Telegram notifications by polling Firestore.",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "dayjs": "^1.11.13",
+    "firebase-admin": "^12.7.0"
+  }
+}
