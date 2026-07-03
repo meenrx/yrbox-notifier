@@ -499,16 +499,18 @@ async function handleOneAlert(token, docSnap) {
     const flex = buildTestFlex(department, requestedByName || 'ทดสอบระบบ')
     const altText = `🔔 ทดสอบระบบแจ้งเตือน — ${department}`
     const tgChatId = deptData.telegramChatId
+    // เว็บยิง Telegram ตรงจากเบราว์เซอร์แล้ว (data.skipTelegram) → notifier ส่งเฉพาะ LINE กันซ้ำ
+    const doTelegram = data.skipTelegram !== true && !!tgChatId
     const [lineOk, tgRes] = await Promise.all([
       groupId ? pushFlex(token, groupId, altText, flex) : Promise.resolve(null),
-      tgChatId
+      doTelegram
         ? sendTelegramTo(tgChatId,
             `🔔 <b>ทดสอบระบบแจ้งเตือน (Telegram)</b>\n🏥 แผนก: <b>${department}</b>\n` +
             `ถ้าเห็นข้อความนี้ = ช่องทาง Telegram พร้อมใช้งาน ✅`)
         : Promise.resolve(null),
     ])
     const lineLabel = lineOk === null ? 'ไม่ได้ตั้ง LINE' : lineOk ? 'สำเร็จ ✅' : 'ล้มเหลว ❌'
-    const tgLabel = tgRes === null ? 'ไม่ได้ตั้ง Chat ID' : tgRes ? 'สำเร็จ ✅' : 'ล้มเหลว ❌'
+    const tgLabel = data.skipTelegram === true ? 'ส่งจากเว็บแล้ว' : tgRes === null ? 'ไม่ได้ตั้ง Chat ID' : tgRes ? 'สำเร็จ ✅' : 'ล้มเหลว ❌'
     const testResult = `LINE: ${lineLabel} · Telegram: ${tgLabel}`
     const anyOk = lineOk === true || tgRes === true
     await docSnap.ref.update({
